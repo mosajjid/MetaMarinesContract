@@ -1,0 +1,7 @@
+/node_modules/
+/hide/
+/artifacts/
+/cache/
+/.idea/
+/.env
+/.openzeppelin/

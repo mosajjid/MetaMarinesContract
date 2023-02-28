@@ -34,13 +34,13 @@ module.exports = {
                 count: 20
             },
         },
-        // rinkeby: {
-        //     url: process.env.ALCHEMY_API_KEY_RINKEBY,
-        //     accounts:
-        //         process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
-        //     gas: 2100000,
-        //     gasPrice: 8000000000
-        // },
+        bscTestnet: {
+            url:"https://data-seed-prebsc-1-s3.binance.org:8545/",
+            accounts:
+                process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+            gas: 2100000,
+            // gasPrice: 8000000000
+        },
         // matic: {
         //     url: process.env.MATIC_URL || "",
         //     accounts:
@@ -57,6 +57,6 @@ module.exports = {
         },
     },
     etherscan: {
-        apiKey: process.env.POLYGONSCAN_API_KEY_MATIC,
+        apiKey: process.env.BSC_API_KEY,
     },
 };

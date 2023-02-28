@@ -11,7 +11,7 @@ const signer = new ethers.Wallet(privateKey).connect(ethers.provider);
 async function main() {
 
     _maxSupply=5000;
-    _paymentToken ="0x078f616FC3BfEf6b4760e46c459F3ad04f2700F4";
+ 
     _name="MetaMarines";
     _symbol="MM";
     
@@ -20,11 +20,14 @@ async function main() {
 
     /***************         Creator           ***************/
     console.log('Deploying ');
-
+    let TestERC20 = await ethers.getContractFactory("TestERC20");
+   let _paymentToken = await TestERC20.deploy(10000000);
+    await _paymentToken.deployed();
+    console.log(`payment token deployed at: ${_paymentToken.address}`);
    
 
     const MetaMarines = await ethers.getContractFactory("MetaMarines");
-    const metaMarines = await MetaMarines.deploy(_paymentToken,_name,_symbol,_maxSupply);
+    const metaMarines = await MetaMarines.deploy(_paymentToken.address,_name,_symbol,_maxSupply);
     await metaMarines.deployed();
     console.log(`metaMarines  deployed at: ${metaMarines.address}`);
 
@@ -39,11 +42,21 @@ async function main() {
     console.log("We verify now, Please wait!");
     await delay(5000);
 
+    try{
+        await hre.run("verify:verify", {
+            address: _paymentToken.address,
+            constructorArguments: [10000000],
+        });
+    }catch(e){
+        console.log(e);
+    }
+
+
     console.log("Verifying Metamarines")
     try{
         await hre.run("verify:verify", {
             address: metaMarines.address,
-            constructorArguments: [_paymentToken,_name,_symbol,_maxSupply],
+            constructorArguments: [_paymentToken.address,_name,_symbol,_maxSupply],
         });
     }catch(e){
         console.log(e);

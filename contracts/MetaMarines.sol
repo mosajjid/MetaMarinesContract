@@ -92,7 +92,7 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
         uint256 _price
     ) external onlyAdmin {
         require(
-            _endTime >= _startTime,
+            _endTime > _startTime,
             "End Time Should Not Be Less Than Start Time"
         );
         categories.push(

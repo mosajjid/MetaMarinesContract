@@ -14,8 +14,8 @@ let _maxSupply = 5000;
 let _paymentToken;
 let _name = "MetaMarines";
 let _symbol = "MM";
-let _startTime = 1677475927;
-let _endTime = 1709011927;
+let _startTime = 1677475927;//27 feb
+let _endTime = 1709011927;//2024 
 let _price = parseEther("100");
 let signers, owner, addr1, addr2, addr3, addr4, admin;
 let signature;
@@ -103,6 +103,43 @@ describe('Add Category', () => {
         expect(price.toString()).to.equal(_price.toString());
     });
 
+    it("Adding public Metamarins Categories for wrong start time", async function () {
+
+        await metaMarines.connect(admin).addCategory(_endTime, _endTime, false, true, _price);
+        let category = await metaMarines.categories(2);
+        let startTime = parseInt(category.startTime);
+        let endTime = parseInt(category.endTime);
+        let isPrivate = category.isPrivate
+        let isActive = category.isActive;
+        let price = category.price;
+
+        expect(startTime).to.equal(_endTime);
+        expect(endTime).to.equal(_endTime);
+        expect(isPrivate).to.equal(false);
+        expect(isActive).to.equal(true);
+        expect(price.toString()).to.equal(_price.toString());
+    });
+
+    it("Adding public Metamarins Categories for wrong endtime time", async function () {
+
+        await metaMarines.connect(admin).addCategory(_startTime, _startTime, false, true, _price);
+        let category = await metaMarines.categories(3);
+        let startTime = parseInt(category.startTime);
+        let endTime = parseInt(category.endTime);
+        let isPrivate = category.isPrivate
+        let isActive = category.isActive;
+        let price = category.price;
+
+        expect(startTime).to.equal(_startTime);
+        expect(endTime).to.equal(_startTime);
+        expect(isPrivate).to.equal(false);
+        expect(isActive).to.equal(true);
+        expect(price.toString()).to.equal(_price.toString());
+    });
+
+
+
+
     it("should not allow any other user to add category", async function () {
         await expect(metaMarines.connect(addr2).addCategory(_startTime, _endTime, true, true, _price)).to.be.revertedWith("Not an Admin")
     });
@@ -166,6 +203,14 @@ describe('Mint Tokens', () => {
 
     });
 
+    it("should not mint token if minting not started", async function () {
+        await _paymentToken.connect(addr1).approve(metaMarines.address, parseEther('3000'));
+        await expect(metaMarines.connect(addr1).MintTokens(1, 2, dummySig)).to.be.revertedWith("Sale Not Started");
+    });
+    it("should not mint token if minting Ends", async function () {
+        await _paymentToken.connect(addr1).approve(metaMarines.address, parseEther('3000'));
+        await expect(metaMarines.connect(addr1).MintTokens(1, 3, dummySig)).to.be.revertedWith("Sale Ends");
+    });
 
     it("Mint Tokens for private Categories", async function () {
         const sellerBalanceBeforeSale = Number(formatEther(await _paymentToken.balanceOf(owner.address)));
@@ -192,7 +237,6 @@ describe('Mint Tokens', () => {
         await _paymentToken.connect(addr4).approve(metaMarines.address, parseEther('3000'));
         await metaMarines.connect(admin).adminMint(addr4.address,1,0);
         let IndicateId = await metaMarines.indicatesID()
-        console.log("indicate id after mint is---->",parseInt(IndicateId));
         expect(await metaMarines.ownerOf(IndicateId-1)).to.equal(addr4.address);
     });
     
@@ -223,6 +267,7 @@ describe('Mint Tokens', () => {
         await _paymentToken.connect(addr1).approve(metaMarines.address, parseEther('3000'));
         await expect(metaMarines.connect(addr1).MintTokens(1, 1, dummySig)).to.be.revertedWith("Category is not active");
     });
+  
 
 });
 

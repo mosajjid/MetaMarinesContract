@@ -17,9 +17,9 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
     // NFT Details
     string public _name;
     string public _symbol;
-    uint256 public _totalSupply = 0;
+    // uint256 public _totalSupply = 0;
     uint256 public _maxSupply;
-    string public _baseTokenURI;
+    string private _baseTokenURI;
     uint256 public indicatesID = 1;
     address public whitelistSigner;
     // needed to accept or decline signatures in whitelisted minting
@@ -91,6 +91,10 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
         bool _isActive,
         uint256 _price
     ) external onlyAdmin {
+        require(
+            _endTime >= _startTime,
+            "End Time Should Not Be Less Than Start Time"
+        );
         categories.push(
             category({
                 id: categories.length,
@@ -132,8 +136,12 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
         return categories[categoryId].isPrivate;
     }
 
-    function adminMint(address receiver, uint256 _quantity,uint256 categoryId)external onlyAdmin{
-         uint256 _indicatesID = indicatesID;
+    function adminMint(
+        address receiver,
+        uint256 _quantity,
+        uint256 categoryId
+    ) external onlyAdmin {
+        uint256 _indicatesID = indicatesID;
 
         require(
             categories[categoryId].isActive == true,
@@ -144,6 +152,12 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
             _quantity + _indicatesID <= _maxSupply,
             "over max supply tokens"
         );
+
+        require(
+            categories[categoryId].startTime <= block.timestamp,
+            "Sale Not Started"
+        );
+        require(categories[categoryId].endTime > block.timestamp, "Sale Ends");
         for (uint256 i = 0; i < _quantity; i++) {
             _mint(receiver, _indicatesID);
             unchecked {
@@ -159,7 +173,6 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
         categories[categoryId].totalMinted += 1;
         indicatesID = _indicatesID;
         emit Mint(receiver, _quantity);
-
     }
 
     function MintTokens(
@@ -178,6 +191,11 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
             _quantity + _indicatesID <= _maxSupply,
             "over max supply tokens"
         );
+        require(
+            categories[categoryId].startTime <= block.timestamp,
+            "Sale Not Started"
+        );
+        require(categories[categoryId].endTime > block.timestamp, "Sale Ends");
 
         //check if sale is private, if sale is private check if user is whitelisted
         if (isPrivateSale(categoryId)) {
@@ -220,16 +238,13 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
     /*
      * Function returns new base URI link
      */
-    function baseURI() external view returns (string memory) {
-        return _baseURI();
+    function baseURI() public view returns (string memory) {
+        return _baseTokenURI;
     }
 
     /*
      * Function returns new base URI link
      */
-    function _baseURI() internal view virtual override returns (string memory) {
-        return _baseTokenURI;
-    }
 
     /*
      * Params
@@ -239,6 +254,20 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
      */
     function setBaseURILink(string memory _baseURILink) external onlyAdmin {
         _baseTokenURI = _baseURILink;
+    }
+
+    function tokenURI(
+        uint256 tokenId
+    ) public view virtual override returns (string memory) {
+        _requireMinted(tokenId);
+        string memory baseURI_ = baseURI();
+       
+        return
+            bytes(baseURI_).length > 0
+                ? string(
+                    abi.encodePacked(baseURI_, tokenId.toString(), ".json")
+                )
+                : "";
     }
 
     function setWhitelistSigner(address _whitelistSigner) external onlyAdmin {

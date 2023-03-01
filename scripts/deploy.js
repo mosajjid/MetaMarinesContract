@@ -21,13 +21,13 @@ async function main() {
     /***************         Creator           ***************/
     console.log('Deploying ');
     let TestERC20 = await ethers.getContractFactory("TestERC20");
-   let _paymentToken = await TestERC20.deploy(10000000);
-    await _paymentToken.deployed();
-    console.log(`payment token deployed at: ${_paymentToken.address}`);
+//    let _paymentToken = await TestERC20.deploy(10000000);
+//     await _paymentToken.deployed();
+//     console.log(`payment token deployed at: ${_paymentToken.address}`);
    
 
     const MetaMarines = await ethers.getContractFactory("MetaMarines");
-    const metaMarines = await MetaMarines.deploy(_paymentToken.address,_name,_symbol,_maxSupply);
+    const metaMarines = await MetaMarines.deploy("0x2d12f78b3098a3f44e7d080431c246920a2ed7b3",_name,_symbol,_maxSupply);
     await metaMarines.deployed();
     console.log(`metaMarines  deployed at: ${metaMarines.address}`);
 
@@ -56,7 +56,7 @@ async function main() {
     try{
         await hre.run("verify:verify", {
             address: metaMarines.address,
-            constructorArguments: [_paymentToken.address,_name,_symbol,_maxSupply],
+            constructorArguments: ["0x2d12f78b3098a3f44e7d080431c246920a2ed7b3",_name,_symbol,_maxSupply],
         });
     }catch(e){
         console.log(e);

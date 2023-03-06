@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/token/common/ERC2981.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
+import "@openzeppelin/contracts/interfaces/IERC2981.sol";
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "hardhat/console.sol";
@@ -24,6 +25,7 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
     address public whitelistSigner;
     // needed to accept or decline signatures in whitelisted minting
     mapping(address => uint256) public nonces;
+    uint256 public totalCategories=0;
 
     // Payment Token
     IERC20 public _paymentToken;
@@ -56,13 +58,15 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
         address paymentToken,
         string memory name,
         string memory symbol,
-        uint256 maxsupply
+        uint256 maxsupply,
+        uint96 _creatorRoyaltyFeesInBips 
     ) ERC721(name, symbol) {
         admin = msg.sender;
         _maxSupply = maxsupply;
         _paymentToken = IERC20(paymentToken);
         _name = name;
         _symbol = symbol;
+         _setDefaultRoyalty(msg.sender, _creatorRoyaltyFeesInBips);
     }
 
     event AddCategory(
@@ -91,6 +95,8 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
         bool _isActive,
         uint256 _price
     ) external onlyAdmin {
+         require(_endTime > block.timestamp, "endtime should not be past");
+       
         require(
             _endTime > _startTime,
             "End Time Should Not Be Less Than Start Time"
@@ -106,7 +112,8 @@ contract MetaMarines is ERC721Enumerable, Ownable, ERC2981, ReentrancyGuard {
                 totalMinted: 0
             })
         );
-
+         
+         totalCategories+=1;
         emit AddCategory(
             categories.length - 1,
             _startTime,

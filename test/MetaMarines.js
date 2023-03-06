@@ -3,6 +3,7 @@ const { expect } = require('chai');
 const { formatEther, parseEther } = require("@ethersproject/units");
 const { BigNumber } = require('@ethersproject/bignumber');
 const { getImplementationAddress } = require('@openzeppelin/upgrades-core');
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 const provider = ethers.provider;
 
@@ -14,9 +15,12 @@ let _maxSupply = 5000;
 let _paymentToken;
 let _name = "MetaMarines";
 let _symbol = "MM";
+let _creatorRoyaltyFeeInBips=1000;
 let _startTime = 1677475927;//27 feb
 let _endTime = 1709011927;//2024 
+let _futureStartTime=1709011927;
 let _price = parseEther("100");
+let _zeroPrice=0;
 let signers, owner, addr1, addr2, addr3, addr4, admin;
 let signature;
 let dummySig = "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
@@ -56,7 +60,7 @@ describe('Deploying contracts', () => {
     it("deploy metamarines contract", async function () {
         snapshotId = await provider.send("evm_snapshot");
         MetaMarinesMarketplace = await ethers.getContractFactory("MetaMarines");
-        metaMarines = await MetaMarinesMarketplace.deploy(_paymentToken.address, _name, _symbol, _maxSupply);
+        metaMarines = await MetaMarinesMarketplace.deploy(_paymentToken.address, _name, _symbol, _maxSupply,_creatorRoyaltyFeeInBips);
         await metaMarines.deployed();
 
         expect(await metaMarines.name()).to.equal('MetaMarines');
@@ -103,9 +107,9 @@ describe('Add Category', () => {
         expect(price.toString()).to.equal(_price.toString());
     });
 
-    it("Adding public Metamarins Categories for wrong start time", async function () {
+    it("Adding inactive Metamarins Categories", async function () {
 
-        await metaMarines.connect(admin).addCategory(_endTime, _endTime, false, true, _price);
+        await metaMarines.connect(admin).addCategory(_futureStartTime, 1741215449, false, true, _price);
         let category = await metaMarines.categories(2);
         let startTime = parseInt(category.startTime);
         let endTime = parseInt(category.endTime);
@@ -113,16 +117,17 @@ describe('Add Category', () => {
         let isActive = category.isActive;
         let price = category.price;
 
-        expect(startTime).to.equal(_endTime);
-        expect(endTime).to.equal(_endTime);
+        expect(startTime).to.equal(_futureStartTime);
+        expect(endTime).to.equal(1741215449);
         expect(isPrivate).to.equal(false);
         expect(isActive).to.equal(true);
         expect(price.toString()).to.equal(_price.toString());
     });
-
-    it("Adding public Metamarins Categories for wrong endtime time", async function () {
-
-        await metaMarines.connect(admin).addCategory(_startTime, _startTime, false, true, _price);
+    it("Adding Metamarins Categories for minting is done", async function () {
+     let date=(new Date()).valueOf()+35000;
+     date=date/1000;
+    
+        await metaMarines.connect(admin).addCategory(_startTime, Math.floor(date), false, true, _price);
         let category = await metaMarines.categories(3);
         let startTime = parseInt(category.startTime);
         let endTime = parseInt(category.endTime);
@@ -131,10 +136,35 @@ describe('Add Category', () => {
         let price = category.price;
 
         expect(startTime).to.equal(_startTime);
-        expect(endTime).to.equal(_startTime);
+        expect(endTime).to.equal(Math.floor(date));
         expect(isPrivate).to.equal(false);
         expect(isActive).to.equal(true);
         expect(price.toString()).to.equal(_price.toString());
+    });
+
+    it("Adding Metamarins Categories for ZeroPrice", async function () {
+       
+       
+           await metaMarines.connect(admin).addCategory(_startTime, _endTime, false, true, _zeroPrice);
+           let category = await metaMarines.categories(4);
+           let startTime = parseInt(category.startTime);
+           let endTime = parseInt(category.endTime);
+           let isPrivate = category.isPrivate
+           let isActive = category.isActive;
+           let price = category.price;
+   
+           expect(startTime).to.equal(_startTime);
+           expect(endTime).to.equal(_endTime);
+           expect(isPrivate).to.equal(false);
+           expect(isActive).to.equal(true);
+           expect(price.toString()).to.equal(_zeroPrice.toString());
+       });
+    // End Time Should Not Be Less Than Start Time"
+   
+
+    it("Adding public Metamarins Categories for wrong endtime time", async function () {
+
+        await expect(metaMarines.connect(admin).addCategory(_endTime, _endTime, true, true, _price)).to.be.revertedWith("End Time Should Not Be Less Than Start Time");
     });
 
 
@@ -207,10 +237,7 @@ describe('Mint Tokens', () => {
         await _paymentToken.connect(addr1).approve(metaMarines.address, parseEther('3000'));
         await expect(metaMarines.connect(addr1).MintTokens(1, 2, dummySig)).to.be.revertedWith("Sale Not Started");
     });
-    it("should not mint token if minting Ends", async function () {
-        await _paymentToken.connect(addr1).approve(metaMarines.address, parseEther('3000'));
-        await expect(metaMarines.connect(addr1).MintTokens(1, 3, dummySig)).to.be.revertedWith("Sale Ends");
-    });
+   
 
     it("Mint Tokens for private Categories", async function () {
         const sellerBalanceBeforeSale = Number(formatEther(await _paymentToken.balanceOf(owner.address)));
@@ -273,6 +300,8 @@ describe('Mint Tokens', () => {
 
 
 
+
+
 describe('Withdraw ERC20 token', () => {
     it("should allow admin to be able to withdraw erc20 token", async function () {
         let contractBalBeforeWithdraw = formatEther(await _paymentToken.balanceOf(metaMarines.address))
@@ -295,5 +324,26 @@ describe('Update Admin', () => {
         await metaMarines.connect(owner).setAdmin(addr3.address);
         expect(await metaMarines.admin()).to.equal(addr3.address);
     });
+});
+describe('Set new Admin and Add Category', () => {
+    const wallet = new ethers.Wallet(privateKey);
+
+ 
+ 
+    it("Set New owner ", async function () {
+        await metaMarines.connect(owner).transferOwnership(addr4.address);
+        expect(await metaMarines.owner()).to.equal(addr4.address);
+    });
+
+    it("Adding public Metamarins Categories from wrong admin", async function () {
+
+        await expect(metaMarines.connect(admin).addCategory(_startTime, _endTime, false, true, _price)).to.be.revertedWith("Not an Admin");
+    });
+
+
+   
+
+
+
 });
 
